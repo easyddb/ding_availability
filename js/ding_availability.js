@@ -120,7 +120,6 @@
             reserver_btn.addClass('reservable');
           }
         }
-
         else {
           element.addClass('not-reservable');
 
