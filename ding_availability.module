@@ -330,8 +330,6 @@ function ding_availability_block_view($delta) {
  */
 function ding_availability_render_legend() {
 
-  drupal_add_css(drupal_get_path('module', 'ding_availability') . '/css/ding_availability_legend.css');
-
   // Construct the image's path (.gif stored in a module subdir).
   $image_path = drupal_get_path('module', 'ding_availability') . '/images/blank.gif';
 
