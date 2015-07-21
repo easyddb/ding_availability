@@ -117,7 +117,11 @@
         if (available) {
           group = $('.js-available', groups_wrapper);
 
-          if (group.length === 0) {
+          if ($('.js-online', groups_wrapper).length !== 0 && element.hasClass('not-reservable')) {
+            element.removeClass('not-reservable');
+            group = $('.js-online', groups_wrapper);
+          }
+          else if (group.length === 0) {
             group = $('<p class="js-available">' + Drupal.t('Available') + ': </p>');
             groups_wrapper.append(group);
           }
@@ -128,9 +132,6 @@
             group = $('<p class="js-reservable">' + Drupal.t('Reservable') + ': </p>');
             groups_wrapper.append(group);
           }
-        }
-        else if ($('.js-online', groups_wrapper).length !== 0) {
-          group = $('.js-online', groups_wrapper);
         }
         else {
           group = $('.js-unavailable', groups_wrapper);
