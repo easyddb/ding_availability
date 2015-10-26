@@ -62,6 +62,7 @@ function ding_availability_theme($existing, $type, $theme, $path) {
         'holdings' => NULL,
         'total_count' => NULL,
         'reserved_count' => NULL,
+        'total_plus_ordered_count' => NULL,
       ),
       'path' => $path . '/templates',
     ),
@@ -160,6 +161,7 @@ function ding_availability_holdings($provider_ids) {
       'reservable' => FALSE,
       'available' => FALSE,
       'holdings' => array(),
+      'ordered_count' => 0,
     );
 
     // Marks internet resources as available.
@@ -171,7 +173,7 @@ function ding_availability_holdings($provider_ids) {
 
     // Support for creating the html here instead of in the provider.
     // The provider contains a location array, total_count, available_count,
-    // reserved_count, reservable_count.
+    // reserved_count, reservable_count, ordered_count.
     // We assume that the provider supports this, if it didn't deliver html.
     if (!isset($item['html'])) {
       $header = array(
@@ -184,27 +186,21 @@ function ding_availability_holdings($provider_ids) {
         'class' => array('availability-holdings-table'),
       );
 
+      // check if there are items in acquisition
+      foreach ($item['holdings'] as $holding) {
+        $item['ordered_count'] += (isset($holding['ordered_count'])) ? (int) $holding['ordered_count'] : 0;
+      }
+      // if yes, add a column
+      if ($item['ordered_count']) {
+        $header['acquisition'] = t('In acquisition');
+      }
+
       $rows = array();
       $copies = 0;
       $closest_loan = NULL;
       $in_acquisition = 0;
       foreach ($item['holdings'] as $holding) {
-        // This item is considered to be waited for.
-        // Next, the number of holdings is compared to reserved ones.
-        // Also keep the next loan date.
-        if (empty($item['available']) && !empty($holding['available_from'])) {
-          $next_loan_time = strtotime($holding['available_from']);
-          $copies++;
-          if (empty($closest_loan) || $closest_loan < $next_loan_time) {
-            $closest_loan = $next_loan_time;
-          }
-        }
-
-        if ($holding['status'] == 'inAcquisition') {
-          $in_acquisition++;
-        }
-
-        $rows[] = ding_availability_holdings_row($holding);
+        $rows[] = ding_availability_holdings_row($holding, $item['ordered_count']);
       }
 
       // Theme the output.
@@ -215,10 +211,10 @@ function ding_availability_holdings($provider_ids) {
           '#rows' => $rows,
           '#attributes' => $attributes,
         ),
-        'total_count' => $item['total_count'],
-        'reserved_count' => $item['reserved_count'],
-        'closest_loan' => (count($item['holdings']) == $copies) ? ding_availability_holding_format_time($closest_loan) : NULL,
-        'in_acquisition' => $in_acquisition,
+        'total_count' => (int) $item['total_count'],
+        'reserved_count' => (int) $item['reserved_count'],
+        'ordered_count' => (int) $item['ordered_count'],
+        'total_plus_ordered_count' => (int) $item['total_count'] + (int) $item['ordered_count'],
       ));
     }
   }
@@ -260,10 +256,11 @@ function ding_availability_holding_format_time($date) {
 
 /**
  * @param $holding
+ * @param $show_ordered_count
  *
  * @return array
  */
-function ding_availability_holdings_row($holding) {
+function ding_availability_holdings_row($holding, $show_ordered_count) {
   $row = array();
 
   // Create placement string.
@@ -273,9 +270,15 @@ function ding_availability_holdings_row($holding) {
   $row['copies'] = isset($holding['total_count']) ? (int) $holding['total_count'] : 0;
 
   // Calculate copies home.
-  $available = isset($holding['available_count']) ? (int) $holding['available_count'] : 0;
-  $available += isset($holding['reference_count']) ? (int) $holding['reference_count'] : 0;
-  $row['available'] = $available;
+  $row['available'] = isset($holding['available_count']) ? (int) $holding['available_count'] : 0;
+  $row['available'] += isset($holding['reference_count']) ? (int) $holding['reference_count'] : 0;
+
+  // copies in acquisition.
+  if ($show_ordered_count) {
+    $ordered_count = isset($holding['ordered_count']) ? (int) $holding['ordered_count'] : 0;
+    $row['copies'] += $ordered_count;
+    $row['ordered_count'] = $ordered_count;
+  }
 
   return $row;
 }
